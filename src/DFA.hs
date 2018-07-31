@@ -51,7 +51,10 @@ nfaToDfa nfa =
     expand visited0 current transitions0 =
       let
         transitions1 :: Set.Set (Char, DfaState, DfaState)
-        transitions1 = Set.fromList $ concatMap follow (Set.toList current)
+        transitions1 =
+          Set.union
+            (Set.fromList $ concatMap follow (Set.toList current))
+            transitions0
 
         visited1 = Set.union visited0 current
         new_states =
