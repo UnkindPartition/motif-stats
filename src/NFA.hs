@@ -1,7 +1,5 @@
 module NFA where
 
-import Control.Monad.State
-import qualified Data.Map as Map
 import IUPAC (primitiveCodes)
 
 -- | The NFA state is simply the index in the motif.
