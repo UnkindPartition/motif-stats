@@ -20,7 +20,8 @@ executable motif-stats
   main-is:             Main.hs
   other-modules:
     IUPAC,
-    NFA
+    NFA,
+    DFA
   -- other-extensions:
   build-depends:       base,
                        containers,
