@@ -2,11 +2,12 @@ module NFA where
 
 import Control.Monad.State
 import qualified Data.Map as Map
+import IUPAC (primitiveCodes)
 
-data NfaState
-  = NfaStart
-  | NfaState !Int
-  deriving (Eq, Ord, Show)
+-- | The NFA state is simply the index in the motif.
+--
+-- 0 is the start state.
+type NfaState = Int
 
 data NFA = NFA
   { nfaFinal :: [NfaState]
@@ -17,13 +18,7 @@ data NFA = NFA
 type Numbered = [[(NfaState, Char)]]
 
 numberSymbols :: [[Char]] -> Numbered
-numberSymbols = flip evalState 0 . traverse (traverse number1)
-  where
-    number1 :: b -> State Int (NfaState, b)
-    number1 b = do
-      i <- get
-      put $! i+1
-      return (NfaState i, b)
+numberSymbols = zipWith (map . (,)) [1..]
 
 follow :: Numbered -> [(Char, NfaState, NfaState)]
 follow motif = concat $ zipWith follow1 motif (tail motif)
@@ -39,9 +34,11 @@ follow motif = concat $ zipWith follow1 motif (tail motif)
 
 final :: Numbered -> [NfaState]
 final motif
-  | null motif = [NfaStart]
+  | null motif = [0]
   | otherwise = fst <$> last motif
 
+-- | Construct an NFA that recognizes the motif preceeded by any number of
+-- characters
 motifToNFA :: [[Char]] -> NFA
 motifToNFA motif =
   let
@@ -49,5 +46,5 @@ motifToNFA motif =
   in
     NFA
       { nfaFinal = final numbered
-      , nfaTransitions = follow numbered
+      , nfaTransitions = follow numbered ++ [(c, 0, 0) | c <- primitiveCodes]
       }

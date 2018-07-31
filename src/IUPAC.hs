@@ -16,10 +16,13 @@ iupacCodes = Map.fromList $
   , ('H', "ACT")
   , ('V', "ACG")
   , ('N', "ACGT")
-  ] ++ [(c,[c]) | c <- "ACGT"]
+  ] ++ [(c,[c]) | c <- primitiveCodes]
 
 expandIUPAC :: [Char] -> [[Char]]
 expandIUPAC = map $ \c ->
   case Map.lookup (toUpper c) iupacCodes of
     Just cs -> cs
     Nothing -> error $ "Unknown IUPAC code: " ++ show c
+
+primitiveCodes :: [Char]
+primitiveCodes = "ACGT"
