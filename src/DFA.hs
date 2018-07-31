@@ -1,14 +1,19 @@
+{-# LANGUAGE RecordWildCards #-}
 module DFA where
 
 import qualified Data.Set as Set
 import qualified Data.Map as Map
 import Data.Maybe
+import Data.Semigroup (stimes)
+import Numeric.LinearAlgebra
 import NFA (NfaState, NFA(..))
 
 type DfaState = Set.Set NfaState
 
 data DFA = DFA
-  { dfaFinal :: Set.Set DfaState
+  { dfaStart :: DfaState
+  , dfaFinal :: Set.Set DfaState
+  , dfaStates :: Set.Set DfaState
   , dfaTransitions :: Set.Set (Char, DfaState, DfaState)
   }
   deriving Show
@@ -17,12 +22,16 @@ data DFA = DFA
 nfaToDfa :: NFA -> DFA
 nfaToDfa nfa =
   let
-    transitions = expand Set.empty (Set.singleton $ Set.singleton 0) Set.empty
+    start :: DfaState
+    start = Set.singleton 0
+    transitions = expand Set.empty (Set.singleton start) Set.empty
     all_states = concat [ [s1,s2] | (_, s1, s2) <- Set.toList transitions ]
   in
     DFA
-      { dfaTransitions = transitions
+      { dfaStart = start
       , dfaFinal = Set.fromList $ filter (Set.member $ nfaFinal nfa) all_states
+      , dfaStates = Set.fromList all_states
+      , dfaTransitions = transitions
       }
   where
     nfa_by_state :: Map.Map NfaState [(Char, NfaState)]
@@ -61,3 +70,41 @@ nfaToDfa nfa =
             transitions1
           else
             expand visited1 new_states transitions1
+
+data TransferMatrix = TransferMatrix
+  { tmMatrix :: Matrix Double
+    -- ^ transfer matrix itself
+  , tmStart :: Vector Double
+    -- ^ the indicator vector of the start state
+  , tmFinal :: Vector Double
+    -- ^ the indicator vector of the final states
+  }
+
+-- | Construct the DFA transfer matrix assuming the uniform distribution
+-- over nucleotides.
+--
+-- Return the matrix and the 0-based indices of the start and end states.
+dfaTransferMatrix
+  :: DFA
+  -> TransferMatrix
+dfaTransferMatrix DFA{..} =
+  let
+    stateToInt = Map.fromList $ zip (Set.toList dfaStates) [0..]
+    n = Map.size stateToInt
+    elts =
+      [ ((stateToInt Map.! s0, stateToInt Map.! s1), 0.25)
+      | (_, s0, s1) <- Set.toList dfaTransitions
+      ]
+  in
+    TransferMatrix
+    { tmMatrix = assoc (n,n) 0 elts
+    , tmStart = assoc n 0 [ (stateToInt Map.! dfaStart, 1) ]
+    , tmFinal = assoc n 0 [ (stateToInt Map.! st, 1) | st <- Set.toList dfaFinal ]
+    }
+
+dfaProbability
+  :: Int -- ^ length of the random string where they motif may occur
+  -> TransferMatrix
+  -> Double
+dfaProbability len TransferMatrix{..} =
+  (tmStart <# stimes len tmMatrix) <.> tmFinal
