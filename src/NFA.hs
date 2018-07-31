@@ -23,11 +23,14 @@ follow = concat . zipWith follow1 [0..]
     follow1 n next =
       [ (c, n, n+1) | c <- next ]
 
--- | Construct an NFA that recognizes the motif preceeded by any number of
+-- | Construct an NFA that recognizes the motif preceeded and followed by any number of
 -- characters
 motifToNFA :: [[Char]] -> NFA
 motifToNFA motif =
   NFA
-    { nfaFinal = length motif
-    , nfaTransitions = follow motif ++ [(c, 0, 0) | c <- primitiveCodes]
+    { nfaFinal = n
+    , nfaTransitions = follow motif ++ [(c, 0, 0) | c <- primitiveCodes] ++
+        -- once we are in the accepting state, we may stay there
+        [(c, n, n) | c <- primitiveCodes]
     }
+  where n = length motif
