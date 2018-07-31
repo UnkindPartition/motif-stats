@@ -3,6 +3,7 @@ module DFA where
 
 import qualified Data.Set as Set
 import qualified Data.Map as Map
+import qualified Data.Map.Strict as MapStrict
 import Data.Maybe
 import Data.Semigroup (stimes)
 import Numeric.LinearAlgebra
@@ -40,7 +41,7 @@ nfaToDfa nfa =
 
     follow :: DfaState -> [(Char, DfaState, DfaState)]
     follow st =
-      (map (\((c,st0),st1) -> (c,st0,st1)) . Map.toList . Map.fromListWith Set.union)
+      (map (\((c,st0),st1) -> (c,st0,st1)) . Map.toList . MapStrict.fromListWith Set.union)
       [ ((c, st), Set.singleton s1)
       | s0 <- Set.toList st
       , (c, s1) <- fromMaybe [] $ Map.lookup s0 nfa_by_state
@@ -79,6 +80,7 @@ data TransferMatrix = TransferMatrix
   , tmFinal :: Vector Double
     -- ^ the indicator vector of the final states
   }
+  deriving (Show)
 
 -- | Construct the DFA transfer matrix assuming the uniform distribution
 -- over nucleotides.
@@ -97,10 +99,12 @@ dfaTransferMatrix DFA{..} =
       ]
   in
     TransferMatrix
-    { tmMatrix = assoc (n,n) 0 elts
+    { tmMatrix = (assoc (n,n) 0 . assocSum) elts
     , tmStart = assoc n 0 [ (stateToInt Map.! dfaStart, 1) ]
     , tmFinal = assoc n 0 [ (stateToInt Map.! st, 1) | st <- Set.toList dfaFinal ]
     }
+  where
+    assocSum = Map.toList . MapStrict.fromListWith (+)
 
 dfaProbability
   :: Int -- ^ length of the random string where they motif may occur
