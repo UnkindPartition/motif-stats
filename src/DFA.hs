@@ -37,7 +37,7 @@ nfaToDfa nfa =
 
     follow :: DfaState -> [(Char, DfaState, DfaState)]
     follow st =
-      (map (\((c,st0),st1) -> (c,st0,st1)) . Map.toList . Map.fromListWith (Set.union))
+      (map (\((c,st0),st1) -> (c,st0,st1)) . Map.toList . Map.fromListWith Set.union)
       [ ((c, st), Set.singleton s1)
       | s0 <- Set.toList st
       , (c, s1) <- fromMaybe [] $ Map.lookup s0 nfa_by_state
