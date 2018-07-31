@@ -7,28 +7,22 @@ import NFA (NfaState, NFA(..))
 
 type DfaState = Set.Set NfaState
 
-data DFA sym state = DFA
-  { dfaStart :: state
-  , dfaFinal :: Set.Set state
-  , dfaStates :: Set.Set state
-  , dfaTransitions :: Set.Set (sym, state, state)
+data DFA = DFA
+  { dfaFinal :: Set.Set DfaState
+  , dfaTransitions :: Set.Set (Char, DfaState, DfaState)
   }
   deriving Show
 
 -- | Build a DFA from an NFA
-nfaToDfa :: NFA -> DFA Char DfaState
+nfaToDfa :: NFA -> DFA
 nfaToDfa nfa =
   let
-    start :: DfaState
-    start = Set.singleton 0
-    transitions = expand Set.empty (Set.singleton start) Set.empty
+    transitions = expand Set.empty (Set.singleton $ Set.singleton 0) Set.empty
     all_states = concat [ [s1,s2] | (_, s1, s2) <- Set.toList transitions ]
   in
     DFA
-      { dfaStart = start
+      { dfaTransitions = transitions
       , dfaFinal = Set.fromList $ filter (Set.member $ nfaFinal nfa) all_states
-      , dfaStates = Set.fromList all_states
-      , dfaTransitions = transitions
       }
   where
     nfa_by_state :: Map.Map NfaState [(Char, NfaState)]
@@ -67,39 +61,3 @@ nfaToDfa nfa =
             transitions1
           else
             expand visited1 new_states transitions1
-
-data MarkedSym sym
-  = Sym sym
-    -- ^ a normal symbol inherited from the non-marked DFA
-  | Mark
-    -- ^ the mark, which follows a match of the regex
-  deriving (Eq, Ord, Show)
-
-data MarkedState state
-  = NormalState state
-    -- ^ a normal state inherited from the non-marked DFA
-  | MarkedState state
-    -- ^ a marked state, which, after recognizing 'Mark', leads to @state@
-  deriving (Eq, Ord, Show)
-
--- | Produce a «marked» automaton
-markDfa
-  :: (Ord sym, Ord state)
-  => DFA sym state
-  -> DFA (MarkedSym sym) (MarkedState state)
-markDfa dfa0 = DFA
-  { dfaStart = NormalState $ dfaStart dfa0
-  , dfaFinal = Set.map NormalState (dfaStates dfa0)
-  , dfaStates = Set.union finalStates markedStates
-  , dfaTransitions = Set.fromList $ do
-      (c, s0, s1) <- Set.toList $ dfaTransitions dfa0
-      if Set.member s1 (dfaFinal dfa0)
-        then
-          [ (Sym c, NormalState s0, MarkedState s1)
-          , (Mark,  MarkedState s1, NormalState s1)
-          ]
-        else return (Sym c, NormalState s0, NormalState s1)
-  }
-  where
-    finalStates = Set.map NormalState (dfaStates dfa0)
-    markedStates = Set.map MarkedState (dfaFinal dfa0)
