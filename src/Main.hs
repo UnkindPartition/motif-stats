@@ -17,7 +17,6 @@ main :: IO ()
 main = join . customExecParser (prefs showHelpOnError) $
   info (helper <*> parser)
   (  fullDesc
-  <> header "Motif stats"
   <> progDesc "Calculate the probability of a motif occurrence in an interval"
   )
   where
