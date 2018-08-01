@@ -26,7 +26,13 @@ executable motif-stats
   build-depends:       base,
                        containers,
                        mtl,
-                       hmatrix
+                       hmatrix,
+                       optparse-applicative,
+                       streaming,
+                       streaming-bytestring,
+                       bytestring,
+                       bytestring-lexing,
+                       resourcet
   hs-source-dirs:      src
   default-language:    Haskell2010
   ghc-options: -Wall

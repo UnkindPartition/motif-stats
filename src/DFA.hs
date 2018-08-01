@@ -107,8 +107,8 @@ dfaTransferMatrix DFA{..} =
     assocSum = Map.toList . MapStrict.fromListWith (+)
 
 dfaProbability
-  :: Int -- ^ length of the random string where they motif may occur
-  -> TransferMatrix
+  :: TransferMatrix
+  -> Int -- ^ length of the random string where they motif may occur
   -> Double
-dfaProbability len TransferMatrix{..} =
+dfaProbability TransferMatrix{..} len =
   (tmStart <# stimes len tmMatrix) <.> tmFinal
