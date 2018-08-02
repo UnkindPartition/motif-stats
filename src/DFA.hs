@@ -55,7 +55,7 @@ nfaToDfa :: forall c . Ord c => [c] -> NFA (Maybe c) -> DFA c
 nfaToDfa alphabet nfa =
   let
     start :: DfaState
-    start = epsilonClosure nfa (Set.singleton $ nfaStart nfa)
+    start = epsilonClosure nfa (nfaStart nfa)
     transitions = go Set.empty (Set.singleton $ start) Set.empty
     all_states = concat [ [s1,s2] | (_, s1, s2) <- Set.toList transitions ]
     contains_final :: DfaState -> Bool

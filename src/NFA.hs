@@ -28,7 +28,7 @@ transitionsFromList l = NfaTransitions $ Map.fromListWith (Map.unionWith mappend
   [ (s0, Map.singleton c (Set.singleton s1)) | (c, s0, s1) <- l ]
 
 data NFA c = NFA
-  { nfaStart :: NfaState
+  { nfaStart :: Set.Set NfaState
   , nfaFinal :: Set.Set NfaState
   , nfaTransitions :: NfaTransitions c
   }
@@ -49,7 +49,7 @@ follow = transitionsFromList . concat . zipWith follow1 [0..]
 motifToNFA :: [[Char]] -> NFA (Maybe Char)
 motifToNFA motif =
   NFA
-    { nfaStart = start
+    { nfaStart = Set.singleton start
     , nfaFinal = Set.singleton (NfaState n)
     , nfaTransitions =
         follow motif <>
