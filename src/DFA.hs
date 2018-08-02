@@ -24,13 +24,15 @@ nfaToDfa :: NFA -> DFA
 nfaToDfa nfa =
   let
     start :: DfaState
-    start = Set.singleton 0
+    start = Set.singleton (nfaStart nfa)
     transitions = expand Set.empty (Set.singleton start) Set.empty
     all_states = concat [ [s1,s2] | (_, s1, s2) <- Set.toList transitions ]
+    contains_final :: DfaState -> Bool
+    contains_final dfa_st = not . Set.null $ Set.intersection (nfaFinal nfa) dfa_st
   in
     DFA
       { dfaStart = start
-      , dfaFinal = Set.fromList $ filter (Set.member $ nfaFinal nfa) all_states
+      , dfaFinal = Set.fromList $ filter contains_final all_states
       , dfaStates = Set.fromList all_states
       , dfaTransitions = transitions
       }

@@ -1,14 +1,14 @@
 module NFA where
 
+import qualified Data.Set as Set
 import IUPAC (primitiveCodes)
 
--- | The NFA state is simply the index in the motif.
---
--- 0 is the start state.
-type NfaState = Int
+newtype NfaState = NfaState Int
+  deriving (Eq, Ord, Show)
 
 data NFA = NFA
-  { nfaFinal :: NfaState
+  { nfaStart :: NfaState
+  , nfaFinal :: Set.Set NfaState
   , nfaTransitions :: [(Char, NfaState, NfaState)]
   }
   deriving Show
@@ -17,20 +17,24 @@ follow :: [[Char]] -> [(Char, NfaState, NfaState)]
 follow = concat . zipWith follow1 [0..]
   where
     follow1
-      :: NfaState
+      :: Int
       -> [Char]
       -> [(Char, NfaState, NfaState)]
     follow1 n next =
-      [ (c, n, n+1) | c <- next ]
+      [ (c, NfaState n, NfaState (n+1)) | c <- next ]
 
 -- | Construct an NFA that recognizes the motif preceeded and followed by any number of
 -- characters
 motifToNFA :: [[Char]] -> NFA
 motifToNFA motif =
   NFA
-    { nfaFinal = n
-    , nfaTransitions = follow motif ++ [(c, 0, 0) | c <- primitiveCodes] ++
+    { nfaStart = start
+    , nfaFinal = Set.singleton (NfaState n)
+    , nfaTransitions = follow motif ++ [(c, start, start) | c <- primitiveCodes] ++
         -- once we are in the accepting state, we may stay there
-        [(c, n, n) | c <- primitiveCodes]
+        [(c, end, end) | c <- primitiveCodes]
     }
-  where n = length motif
+  where
+    n = length motif
+    start = NfaState 0
+    end = NfaState n
