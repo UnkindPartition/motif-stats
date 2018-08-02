@@ -15,6 +15,7 @@ import IUPAC (primitiveCodes)
 
 data Regex c
   = Sym c
+  | AnySym
   | Seq (Regex c) (Regex c)
   | Alt (Regex c) (Regex c)
   | Plus (Regex c)
@@ -45,8 +46,12 @@ data NFA c = NFA
   }
   deriving Show
 
-compile :: Ord c => Regex c -> NFA (Maybe c)
-compile = flip evalState 0 . compileM
+compile
+  :: Ord c
+  => [c] -- ^ all possible characters (to implement AnySym)
+  -> Regex c
+  -> NFA (Maybe c)
+compile alphabet = flip evalState 0 . compileM alphabet
 
 -- Here I chose a fully recursive implementation (each recursive call
 -- produces a full NFA; auxiliary states glue them together), as opposed to
@@ -56,9 +61,10 @@ compile = flip evalState 0 . compileM
 -- https://ro-che.info/articles/2015-09-02-monadfix. No particular reason.
 compileM
   :: Ord c
-  => Regex c
+  => [c] -- ^ all possible characters (to implement AnySym)
+  -> Regex c
   -> State Int (NFA (Maybe c))
-compileM = \case
+compileM alphabet = fix $ \rec -> \case
   Sym c -> do
     s <- fresh
     f <- fresh
@@ -66,6 +72,14 @@ compileM = \case
       { nfaStart = Set.singleton s
       , nfaFinal = Set.singleton f
       , nfaTransitions = transitionsFromList [(Just c, s, f)]
+      }
+  AnySym -> do
+    s <- fresh
+    f <- fresh
+    return $ NFA
+      { nfaStart = Set.singleton s
+      , nfaFinal = Set.singleton f
+      , nfaTransitions = transitionsFromList [(Just c, s, f) | c <- alphabet]
       }
   Empty -> do
     s <- fresh
@@ -75,8 +89,8 @@ compileM = \case
       , nfaTransitions = transitionsFromList []
       }
   Seq a b -> do
-    nfa_a <- compileM a
-    nfa_b <- compileM b
+    nfa_a <- rec a
+    nfa_b <- rec b
     return $ NFA
       { nfaStart = nfaStart nfa_a
       , nfaFinal = nfaFinal nfa_b
@@ -91,15 +105,15 @@ compileM = \case
         ]
       }
   Alt a b -> do
-    nfa_a <- compileM a
-    nfa_b <- compileM b
+    nfa_a <- rec a
+    nfa_b <- rec b
     return $ NFA
       { nfaStart = nfaStart nfa_a <> nfaStart nfa_b
       , nfaFinal = nfaFinal nfa_a <> nfaFinal nfa_b
       , nfaTransitions = nfaTransitions nfa_a <> nfaTransitions nfa_b
       }
   Plus a -> do
-    nfa_a <- compileM a
+    nfa_a <- rec a
     return $ NFA
       { nfaStart = nfaStart nfa_a
       , nfaFinal = nfaFinal nfa_a
@@ -111,7 +125,7 @@ compileM = \case
         , f <- Set.toList $ nfaFinal nfa_a
         ]
       }
-  Star a -> compileM $ Alt (Plus a) Empty
+  Star a -> rec $ Alt (Plus a) Empty
 
   where
     fresh :: State Int NfaState
