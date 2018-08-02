@@ -6,8 +6,10 @@ It works as described in [this blog post](https://ro-che.info/articles/2018-08-0
 
 By default, it takes a BED file as an input and calculates the probability for
 every interval based on its length.
-When the `--raw` switch, it reads the list of sequence lengths (one per line) instead.
+With the `--raw` switch, it reads the list of sequence lengths (one per line) instead.
 
+By default, it considers both the motif and its reverse complement.
+With the `--norc` switch, it only considers the motif itself.
 
 ## Installation
 
@@ -21,13 +23,15 @@ When the `--raw` switch, it reads the list of sequence lengths (one per line) in
 
 
 ```
-Usage: motif-stats [-r|--raw] [-i ARG] [-o ARG] MOTIF
+Usage: motif-stats [-r|--raw] [--norc] [-i ARG] [-o ARG] MOTIF
   Calculate the probability of a motif occurrence in an interval
 
 Available options:
   -h,--help                Show this help text
   -r,--raw                 take a list of interval lengths as an input (the
                            default is BED file)
+  --norc                   consider only motif itself (default: consider also
+                           its reverse complement
   -i ARG                   the input file (default: stdin)
   -o ARG                   the output file (default: stdout)
   MOTIF                    motif represented as a string of IUPAC codes
@@ -41,8 +45,8 @@ Let's calculate the probability with which the pattern `GCCB` (i.e.
     % echo 100 | motif-stats -r GCCB
     0.6885116541460469
 
-Do the same for all lengths from 1 to 400 and plot the results:
+Do the same for all lengths from 1 to 200 and plot the results:
 
-    % seq 1 400 | motif-stats -r GCCB | gnuplot -p -e 'plot "/dev/stdin"'
+    % seq 1 200 | motif-stats -r GCCB | gnuplot -p -e 'plot "/dev/stdin"'
 
 ![](plot.png)
