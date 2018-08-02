@@ -36,6 +36,10 @@ library
     resourcet
   default-language:
     Haskell2010
+  default-extensions:
+    RecordWildCards
+    LambdaCase
+    ScopedTypeVariables
   ghc-options: -Wall
 
 executable motif-stats
