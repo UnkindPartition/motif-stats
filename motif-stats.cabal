@@ -13,7 +13,6 @@ maintainer:          roma@ro-che.info
 -- copyright:
 -- category:
 build-type:          Simple
-extra-source-files:  ChangeLog.md
 cabal-version:       >=1.10
 
 library
