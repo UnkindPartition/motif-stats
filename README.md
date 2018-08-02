@@ -1,5 +1,5 @@
 This program computes the probability that a given DNA motif (represented as
-IUPAC codes) will occur inside a random DNA sequence of a given length.
+a sequence of IUPAC codes) will occur inside a random DNA sequence of a given length.
 It assumes that all four bases are equally likely and independent between the
 positions.
 It works as described in [this blog post](https://ro-che.info/articles/2018-08-01-probability-of-regex).
