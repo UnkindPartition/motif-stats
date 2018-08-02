@@ -7,7 +7,7 @@ import IUPAC
 -- | Calculate a probability for one strand only
 iupacProb1 :: String -> Int -> Double
 iupacProb1 motif =
-  dfaProbability . dfaTransferMatrix . nfaToDfa . motifToNFA . expandIUPAC $ motif
+  dfaProbability . dfaTransferMatrix . nfaToDfa primitiveCodes . motifToNFA . expandIUPAC $ motif
 
 main :: IO ()
 main = defaultMain $ testGroup "Tests"

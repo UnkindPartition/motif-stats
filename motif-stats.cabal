@@ -40,6 +40,8 @@ library
     RecordWildCards
     LambdaCase
     ScopedTypeVariables
+    NamedFieldPuns
+    BangPatterns
   ghc-options: -Wall
 
 executable motif-stats

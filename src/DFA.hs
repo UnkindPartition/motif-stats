@@ -7,7 +7,7 @@ import qualified Data.Map.Strict as MapStrict
 import Data.Maybe
 import Data.Semigroup (stimes)
 import Numeric.LinearAlgebra
-import NFA (NfaState, NFA(..))
+import NFA
 
 type DfaState = Set.Set NfaState
 
@@ -19,13 +19,44 @@ data DFA c = DFA
   }
   deriving Show
 
+-- | Like 'concatMap', but for 'Set.Set's
+sconcatMap :: (Ord a, Ord b) => (a -> Set.Set b) -> Set.Set a -> Set.Set b
+sconcatMap f = mconcat . map f . Set.toList
+
+-- | Return all epsilon-edges from an NFA state
+epsilonEdges :: Ord c => NFA (Maybe c) -> NfaState -> Set.Set NfaState
+epsilonEdges NFA{nfaTransitions} s =
+  fromMaybe mempty . Map.lookup Nothing . fromMaybe mempty . Map.lookup s $
+    transitionMap nfaTransitions
+
+-- | Compute an epsilon-closure
+epsilonClosure :: Ord c => NFA (Maybe c) -> Set.Set NfaState -> Set.Set NfaState
+epsilonClosure nfa = go mempty
+  where
+    go !seen0 !new0
+      | Set.null new0 = seen0
+      | otherwise =
+      let
+        seen1 = Set.union seen0 new0
+        new1 = Set.difference (sconcatMap (epsilonEdges nfa) new0) seen0
+      in go seen1 new1
+
+-- | @move nfa s a@ is a set of NFA states where we can get from one of the
+-- states in @s@ after receiving @a@ as an input
+move :: Ord c => NFA (Maybe c) -> DfaState -> c -> DfaState
+move NFA{nfaTransitions} ss c = sconcatMap
+  (\s -> fromMaybe mempty . Map.lookup (Just c) .
+    fromMaybe mempty . Map.lookup s $
+    transitionMap nfaTransitions)
+  ss
+
 -- | Build a DFA from an NFA
-nfaToDfa :: forall c . Ord c => NFA c -> DFA c
-nfaToDfa nfa =
+nfaToDfa :: forall c . Ord c => [c] -> NFA (Maybe c) -> DFA c
+nfaToDfa alphabet nfa =
   let
     start :: DfaState
-    start = Set.singleton (nfaStart nfa)
-    transitions = expand Set.empty (Set.singleton start) Set.empty
+    start = epsilonClosure nfa (Set.singleton $ nfaStart nfa)
+    transitions = go Set.empty (Set.singleton $ start) Set.empty
     all_states = concat [ [s1,s2] | (_, s1, s2) <- Set.toList transitions ]
     contains_final :: DfaState -> Bool
     contains_final dfa_st = not . Set.null $ Set.intersection (nfaFinal nfa) dfa_st
@@ -37,42 +68,28 @@ nfaToDfa nfa =
       , dfaTransitions = transitions
       }
   where
-    nfa_by_state :: Map.Map NfaState [(c, NfaState)]
-    nfa_by_state = Map.fromListWith (++)
-      [(s0, [(c, s1)]) | (c, s0, s1) <- nfaTransitions nfa]
-
-    follow :: DfaState -> [(c, DfaState, DfaState)]
-    follow st =
-      (map (\((c,st0),st1) -> (c,st0,st1)) . Map.toList . MapStrict.fromListWith Set.union)
-      [ ((c, st), Set.singleton s1)
-      | s0 <- Set.toList st
-      , (c, s1) <- fromMaybe [] $ Map.lookup s0 nfa_by_state
-      ]
-    -- Expand the set of transitions given a set of starting states
-    expand
+    go
       :: Set.Set DfaState
       -> Set.Set DfaState
       -> Set.Set (c, DfaState, DfaState)
       -> Set.Set (c, DfaState, DfaState)
-    expand visited0 current transitions0 =
+    go !seen0 !new0 !transitions0
+      | Set.null new0 = transitions0
+      | otherwise =
       let
-        transitions1 :: Set.Set (c, DfaState, DfaState)
-        transitions1 =
-          Set.union
-            (Set.fromList $ concatMap follow (Set.toList current))
-            transitions0
+        seen1 = Set.union seen0 new0
+        -- where can we get from the DFA states in new1?
+        (transitions1, new1) =
+          flip foldMap new0 $ \s ->
+          flip foldMap alphabet $ \c ->
+          let
+            next :: DfaState
+            next = epsilonClosure nfa (move nfa s c)
+          in (Set.singleton (c, s, next), Set.singleton next)
 
-        visited1 = Set.union visited0 current
-        new_states =
-          Set.difference
-            (Set.map (\(_,_,s) -> s) transitions1)
-            visited1
-      in
-        if Set.size transitions1 == Set.size transitions0
-          then -- no progress was made; closure reached
-            transitions1
-          else
-            expand visited1 new_states transitions1
+        transitions2 = transitions0 `Set.union` transitions1
+        new2 = new1 `Set.difference` seen1
+      in go seen1 new2 transitions2
 
 data TransferMatrix = TransferMatrix
   { tmMatrix :: Matrix Double
