@@ -134,30 +134,12 @@ compileM alphabet = fix $ \rec -> \case
       put $! n+1
       return $ NfaState n
 
-follow :: Ord c => [[c]] -> NfaTransitions (Maybe c)
-follow = transitionsFromList . concat . zipWith follow1 [0..]
-  where
-    follow1
-      :: Int
-      -> [c]
-      -> [(Maybe c, NfaState, NfaState)]
-    follow1 n next =
-      [ (Just c, NfaState n, NfaState (n+1)) | c <- next ]
-
 -- | Construct an NFA that recognizes the motif preceeded and followed by any number of
 -- characters
 motifToNFA :: [[Char]] -> NFA (Maybe Char)
 motifToNFA motif =
-  NFA
-    { nfaStart = Set.singleton start
-    , nfaFinal = Set.singleton (NfaState n)
-    , nfaTransitions =
-        follow motif <>
-        transitionsFromList [(Just c, start, start) | c <- primitiveCodes] <>
-        -- once we are in the accepting state, we may stay there
-        transitionsFromList [(Just c, end, end) | c <- primitiveCodes]
-    }
-  where
-    n = length motif
-    start = NfaState 0
-    end = NfaState n
+  let
+    motif_re =
+      foldr Seq Empty $
+        map (foldr1 Alt . map Sym) motif
+  in compile primitiveCodes $ Star AnySym `Seq` motif_re `Seq` Star AnySym
