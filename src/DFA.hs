@@ -11,16 +11,16 @@ import NFA (NfaState, NFA(..))
 
 type DfaState = Set.Set NfaState
 
-data DFA = DFA
+data DFA c = DFA
   { dfaStart :: DfaState
   , dfaFinal :: Set.Set DfaState
   , dfaStates :: Set.Set DfaState
-  , dfaTransitions :: Set.Set (Char, DfaState, DfaState)
+  , dfaTransitions :: Set.Set (c, DfaState, DfaState)
   }
   deriving Show
 
 -- | Build a DFA from an NFA
-nfaToDfa :: NFA -> DFA
+nfaToDfa :: forall c . Ord c => NFA c -> DFA c
 nfaToDfa nfa =
   let
     start :: DfaState
@@ -37,11 +37,11 @@ nfaToDfa nfa =
       , dfaTransitions = transitions
       }
   where
-    nfa_by_state :: Map.Map NfaState [(Char, NfaState)]
+    nfa_by_state :: Map.Map NfaState [(c, NfaState)]
     nfa_by_state = Map.fromListWith (++)
       [(s0, [(c, s1)]) | (c, s0, s1) <- nfaTransitions nfa]
 
-    follow :: DfaState -> [(Char, DfaState, DfaState)]
+    follow :: DfaState -> [(c, DfaState, DfaState)]
     follow st =
       (map (\((c,st0),st1) -> (c,st0,st1)) . Map.toList . MapStrict.fromListWith Set.union)
       [ ((c, st), Set.singleton s1)
@@ -52,11 +52,11 @@ nfaToDfa nfa =
     expand
       :: Set.Set DfaState
       -> Set.Set DfaState
-      -> Set.Set (Char, DfaState, DfaState)
-      -> Set.Set (Char, DfaState, DfaState)
+      -> Set.Set (c, DfaState, DfaState)
+      -> Set.Set (c, DfaState, DfaState)
     expand visited0 current transitions0 =
       let
-        transitions1 :: Set.Set (Char, DfaState, DfaState)
+        transitions1 :: Set.Set (c, DfaState, DfaState)
         transitions1 =
           Set.union
             (Set.fromList $ concatMap follow (Set.toList current))
@@ -89,7 +89,7 @@ data TransferMatrix = TransferMatrix
 --
 -- Return the matrix and the 0-based indices of the start and end states.
 dfaTransferMatrix
-  :: DFA
+  :: DFA c
   -> TransferMatrix
 dfaTransferMatrix DFA{..} =
   let

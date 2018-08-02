@@ -6,10 +6,10 @@ import IUPAC (primitiveCodes)
 newtype NfaState = NfaState Int
   deriving (Eq, Ord, Show)
 
-data NFA = NFA
+data NFA c = NFA
   { nfaStart :: NfaState
   , nfaFinal :: Set.Set NfaState
-  , nfaTransitions :: [(Char, NfaState, NfaState)]
+  , nfaTransitions :: [(c, NfaState, NfaState)]
   }
   deriving Show
 
@@ -25,7 +25,7 @@ follow = concat . zipWith follow1 [0..]
 
 -- | Construct an NFA that recognizes the motif preceeded and followed by any number of
 -- characters
-motifToNFA :: [[Char]] -> NFA
+motifToNFA :: [[Char]] -> NFA Char
 motifToNFA motif =
   NFA
     { nfaStart = start
