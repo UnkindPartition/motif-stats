@@ -1,4 +1,4 @@
-module Main where
+module CmdLine (main) where
 
 import Options.Applicative
 import Control.Monad (join)
