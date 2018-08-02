@@ -4,14 +4,12 @@ module NFA
   , NfaTransitions(..)
   , NFA(..)
   , compile
-  , motifToNFA
   )
   where
 
 import qualified Data.Set as Set
 import qualified Data.Map.Strict as Map
 import Control.Monad.State.Strict
-import IUPAC (primitiveCodes)
 
 data Regex c
   = Sym c
@@ -133,13 +131,3 @@ compileM alphabet = fix $ \rec -> \case
       n <- get
       put $! n+1
       return $ NfaState n
-
--- | Construct an NFA that recognizes the motif preceeded and followed by any number of
--- characters
-motifToNFA :: [[Char]] -> NFA (Maybe Char)
-motifToNFA motif =
-  let
-    motif_re =
-      foldr Seq Empty $
-        map (foldr1 Alt . map Sym) motif
-  in compile primitiveCodes $ Star AnySym `Seq` motif_re `Seq` Star AnySym

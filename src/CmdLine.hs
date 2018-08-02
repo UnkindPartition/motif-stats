@@ -10,7 +10,6 @@ import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lex.Integral as L
 import System.IO
 import IUPAC
-import NFA
 import DFA
 
 main :: IO ()
@@ -27,6 +26,10 @@ main = join . customExecParser (prefs showHelpOnError) $
             (  long "raw"
             <> short 'r'
             <> help "take a list of interval lengths as an input (the default is BED file)"
+            )
+        <*> flag RC NoRC
+            ( long "norc"
+            <> help "consider only motif itself (default: consider also its reverse complement"
             )
         <*> optional (strOption
             ( short 'i'
@@ -57,15 +60,15 @@ readNum bs =
     Just (n, rest) | BS.null rest -> n
     _ -> error $ "Invalid number: " ++ show bs
 
-work :: Bool -> Maybe FilePath -> Maybe FilePath -> String -> IO ()
-work raw inp_file outp_file motif = R.runResourceT $ do
+work :: Bool -> RC -> Maybe FilePath -> Maybe FilePath -> String -> IO ()
+work raw rc inp_file outp_file motif = R.runResourceT $ do
   inp_h <- case inp_file of
     Nothing -> return stdin
     Just path -> snd <$> R.allocate (openFile path ReadMode) hClose
   outp_h <- case outp_file of
     Nothing -> return stdout
     Just path -> snd <$> R.allocate (openFile path ReadMode) hClose
-  let tm = dfaTransferMatrix . nfaToDfa primitiveCodes . motifToNFA . expandIUPAC $ motif
+  let tm = dfaTransferMatrix . nfaToDfa primitiveCodes . motifToNFA rc $ motif
       inp_s
         | raw = rawLengths inp_h
         | otherwise = bedLengths inp_h
