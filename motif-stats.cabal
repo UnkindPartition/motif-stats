@@ -42,6 +42,7 @@ library
     ScopedTypeVariables
     NamedFieldPuns
     BangPatterns
+    ViewPatterns
   ghc-options: -Wall
 
 executable motif-stats

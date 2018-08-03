@@ -6,7 +6,7 @@ import qualified Data.Map as Map
 import qualified Data.Map.Strict as MapStrict
 import Data.Maybe
 import Data.Semigroup (stimes)
-import Numeric.LinearAlgebra
+import Numeric.LinearAlgebra hiding (remap)
 import NFA
 
 -- | The DFA type is parameterized on the state type, so that we can use
@@ -103,6 +103,28 @@ nfaToDfa alphabet nfa =
       in go seen1 new2 transitions2
 
 ----------------------------------------------------------------------
+--                         DFA optimization
+----------------------------------------------------------------------
+
+-- | Convert all states of the DFA to consecutive integers starting from 0
+remapStates
+  :: (Ord s, Ord c)
+  => DFA s c
+  -> DFA DfaState2 c
+remapStates DFA{..} =
+  let
+    stateMap = Map.fromList $ zip (Set.toList $ dfaStates) [0..]
+    remap = (stateMap Map.!)
+  in
+    DFA
+    { dfaStart = remap dfaStart
+    , dfaFinal = Set.map remap dfaFinal
+    , dfaStates = Set.map remap dfaStates
+    , dfaTransitions = Set.map (\(c,s0,s1) -> (c, remap s0, remap s1)) dfaTransitions
+    }
+
+
+----------------------------------------------------------------------
 --                Transfer matrices and probabilities
 ----------------------------------------------------------------------
 
@@ -121,22 +143,22 @@ data TransferMatrix = TransferMatrix
 --
 -- Return the matrix and the 0-based indices of the start and end states.
 dfaTransferMatrix
-  :: Ord s
+  :: (Ord c, Ord s)
   => DFA s c
   -> TransferMatrix
-dfaTransferMatrix DFA{..} =
+dfaTransferMatrix (remapStates -> DFA{..}) =
+  -- we remap the DFA once again to make sure the numbers are consecutive
   let
-    stateToInt = Map.fromList $ zip (Set.toList dfaStates) [0..]
-    n = Map.size stateToInt
+    n = Set.size dfaStates
     elts =
-      [ ((stateToInt Map.! s0, stateToInt Map.! s1), 0.25)
+      [ ((s0, s1), 0.25)
       | (_, s0, s1) <- Set.toList dfaTransitions
       ]
   in
     TransferMatrix
     { tmMatrix = (assoc (n,n) 0 . assocSum) elts
-    , tmStart = assoc n 0 [ (stateToInt Map.! dfaStart, 1) ]
-    , tmFinal = assoc n 0 [ (stateToInt Map.! st, 1) | st <- Set.toList dfaFinal ]
+    , tmStart = assoc n 0 [ (dfaStart, 1) ]
+    , tmFinal = assoc n 0 [ (st, 1) | st <- Set.toList dfaFinal ]
     }
   where
     assocSum = Map.toList . MapStrict.fromListWith (+)
