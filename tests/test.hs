@@ -3,7 +3,6 @@ import Test.Tasty.HUnit
 import DFA
 import IUPAC
 
--- | Calculate a probability for one strand only
 iupacProb1 :: RC -> String -> Int -> Double
 iupacProb1 rc motif =
   dfaProbability $ motifToTm rc motif
