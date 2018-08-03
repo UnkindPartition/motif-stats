@@ -2,13 +2,14 @@
 module DFA where
 
 import qualified Data.Set as Set
-import qualified Data.Map as Map
-import qualified Data.Map.Strict as MapStrict
+import qualified Data.Map.Strict as Map
+import Control.Monad.State
 import Data.Maybe
 import Data.Semigroup (stimes)
-import Numeric.LinearAlgebra hiding (remap)
+import Numeric.LinearAlgebra hiding (remap, (<>))
 import NFA
 import Utils
+import qualified Partition as P
 
 -- | The DFA type is parameterized on the state type, so that we can use
 -- Sets during the subset construction and then map them to integers for
@@ -103,23 +104,54 @@ nfaToDfa alphabet nfa =
 --                         DFA optimization
 ----------------------------------------------------------------------
 
+-- | Map all DFA states
+mapStates
+  :: (Ord s1, Ord s2, Ord c)
+  => (s1 -> s2)
+  -> DFA s1 c
+  -> DFA s2 c
+mapStates remap DFA{..} =
+  DFA
+  { dfaStart = remap dfaStart
+  , dfaFinal = Set.map remap dfaFinal
+  , dfaStates = Set.map remap dfaStates
+  , dfaTransitions = Set.map (\(c,s0,s1) -> (c, remap s0, remap s1)) dfaTransitions
+  }
+
 -- | Convert all states of the DFA to consecutive integers starting from 0
-remapStates
+mapStatesToInt
   :: (Ord s, Ord c)
   => DFA s c
   -> DFA DfaState2 c
-remapStates DFA{..} =
+mapStatesToInt dfa =
   let
-    stateMap = Map.fromList $ zip (Set.toList $ dfaStates) [0..]
+    stateMap = Map.fromList $ zip (Set.toList . dfaStates $ dfa) [0..]
     remap = (stateMap Map.!)
   in
-    DFA
-    { dfaStart = remap dfaStart
-    , dfaFinal = Set.map remap dfaFinal
-    , dfaStates = Set.map remap dfaStates
-    , dfaTransitions = Set.map (\(c,s0,s1) -> (c, remap s0, remap s1)) dfaTransitions
-    }
+    mapStates remap dfa
 
+minimizeDfa
+  :: forall s c . (Ord c, Ord s)
+  => DFA s c
+  -> DFA Int c
+minimizeDfa dfa@DFA{..} = flip evalState 0 $ do
+  initialPartition <- liftM2 (<>)
+    (P.singleton dfaFinal)
+    (P.singleton $ dfaStates `Set.difference` dfaFinal)
+
+  let
+    transitionMap :: Map.Map s (Map.Map c s)
+    transitionMap = Map.fromListWith Map.union
+      [ (s0, Map.singleton c s1)
+      | (c, s0, s1) <- Set.toList dfaTransitions
+      ]
+
+    classify :: P.Partition s -> s -> Map.Map c Int
+    classify pt s = fmap (P.lookupState pt) $ transitionMap Map.! s
+
+  finalPartition <- P.subpartitionFixpoint classify initialPartition
+
+  return $ mapStates (P.lookupState finalPartition) dfa
 
 ----------------------------------------------------------------------
 --                Transfer matrices and probabilities
@@ -143,7 +175,7 @@ dfaTransferMatrix
   :: (Ord c, Ord s)
   => DFA s c
   -> TransferMatrix
-dfaTransferMatrix (remapStates -> DFA{..}) =
+dfaTransferMatrix (mapStatesToInt -> DFA{..}) =
   -- we remap the DFA once again to make sure the numbers are consecutive
   let
     n = Set.size dfaStates
@@ -158,7 +190,7 @@ dfaTransferMatrix (remapStates -> DFA{..}) =
     , tmFinal = assoc n 0 [ (st, 1) | st <- Set.toList dfaFinal ]
     }
   where
-    assocSum = Map.toList . MapStrict.fromListWith (+)
+    assocSum = Map.toList . Map.fromListWith (+)
 
 dfaProbability
   :: TransferMatrix

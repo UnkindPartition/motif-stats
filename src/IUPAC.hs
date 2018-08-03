@@ -58,4 +58,7 @@ motifToTm
   :: RC
   -> String
   -> TransferMatrix
-motifToTm rc = dfaTransferMatrix . remapStates . nfaToDfa primitiveCodes . motifToNFA rc
+motifToTm rc
+  = dfaTransferMatrix
+  . minimizeDfa . mapStatesToInt
+  . nfaToDfa primitiveCodes . motifToNFA rc

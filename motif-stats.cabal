@@ -23,7 +23,8 @@ library
     NFA,
     DFA,
     CmdLine,
-    Utils
+    Utils,
+    Partition
   build-depends:
     base,
     containers,
