@@ -22,7 +22,8 @@ library
     IUPAC,
     NFA,
     DFA,
-    CmdLine
+    CmdLine,
+    Utils
   build-depends:
     base,
     containers,
@@ -43,6 +44,7 @@ library
     NamedFieldPuns
     BangPatterns
     ViewPatterns
+    FlexibleContexts
   ghc-options: -Wall
 
 executable motif-stats

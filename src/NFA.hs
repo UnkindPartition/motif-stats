@@ -10,6 +10,7 @@ module NFA
 import qualified Data.Set as Set
 import qualified Data.Map.Strict as Map
 import Control.Monad.State.Strict
+import Utils
 
 data Regex c
   = Sym c
@@ -127,7 +128,4 @@ compileM alphabet = fix $ \rec -> \case
 
   where
     fresh :: State Int NfaState
-    fresh = do
-      n <- get
-      put $! n+1
-      return $ NfaState n
+    fresh = NfaState <$> nextInt

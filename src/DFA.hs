@@ -8,6 +8,7 @@ import Data.Maybe
 import Data.Semigroup (stimes)
 import Numeric.LinearAlgebra hiding (remap)
 import NFA
+import Utils
 
 -- | The DFA type is parameterized on the state type, so that we can use
 -- Sets during the subset construction and then map them to integers for
@@ -25,10 +26,6 @@ type DfaState1 = Set.Set NfaState
 
 -- | Then, the sets are mapped into integers
 type DfaState2 = Int
-
--- | Like 'concatMap', but for 'Set.Set's
-sconcatMap :: (Ord a, Ord b) => (a -> Set.Set b) -> Set.Set a -> Set.Set b
-sconcatMap f = mconcat . map f . Set.toList
 
 ----------------------------------------------------------------------
 --                      The subset construction
