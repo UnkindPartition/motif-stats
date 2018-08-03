@@ -1,7 +1,12 @@
 import Test.Tasty
 import Test.Tasty.HUnit
+import System.Random
+import Data.Monoid
+import Control.Monad
+import Control.Monad.IO.Class
 import DFA
 import IUPAC
+import LruCache
 
 iupacProb1 :: RC -> String -> Int -> Double
 iupacProb1 rc motif =
@@ -27,4 +32,12 @@ main = defaultMain $ testGroup "Tests"
       iupacProb1 RC "GG" 2 @?= 2 * iupacProb1 NoRC "GG" 2
   , testCase "\"K\", 2 strands, n = 1" $
       iupacProb1 RC "K" 2 @?= 1
+  , testCase "LRU-cached power" $ do
+      let
+        g = mkStdGen 2018
+        ns :: [Int]
+        ns = take 10000 $ randomRs (1, 500) g
+      flip runLruT 30 $ forM_ ns $ \n -> do
+        r <- lruPow n (Sum 3)
+        liftIO $ getSum r @?= 3 * n
   ]

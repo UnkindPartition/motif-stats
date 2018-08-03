@@ -1,7 +1,7 @@
 module CmdLine (main) where
 
 import Options.Applicative
-import Control.Monad (join)
+import Control.Monad
 import qualified Control.Monad.Trans.Resource as R
 import Streaming as S
 import qualified Streaming.Prelude as S
@@ -11,6 +11,7 @@ import qualified Data.ByteString.Lex.Integral as L
 import System.IO
 import IUPAC
 import DFA
+import LruCache
 
 main :: IO ()
 main = join . customExecParser (prefs showHelpOnError) $
@@ -39,6 +40,13 @@ main = join . customExecParser (prefs showHelpOnError) $
             ( short 'o'
             <> help "the output file (default: stdout)"
             ))
+        <*> option auto
+            ( long "cache-size"
+            <> metavar "NUM"
+            <> help "the cache size for matrix multiplication"
+            <> value 1000
+            <> showDefault
+            )
         <*> strArgument
             ( metavar "MOTIF"
             <> help "motif represented as a string of IUPAC codes"
@@ -60,8 +68,10 @@ readNum bs =
     Just (n, rest) | BS.null rest -> n
     _ -> error $ "Invalid number: " ++ show bs
 
-work :: Bool -> RC -> Maybe FilePath -> Maybe FilePath -> String -> IO ()
-work raw rc inp_file outp_file motif = R.runResourceT $ do
+work :: Bool -> RC -> Maybe FilePath -> Maybe FilePath -> Integer -> String -> IO ()
+work raw rc inp_file outp_file cache_size motif =
+  R.runResourceT $ do
+
   inp_h <- case inp_file of
     Nothing -> return stdin
     Just path -> snd <$> R.allocate (openFile path ReadMode) hClose
@@ -72,4 +82,5 @@ work raw rc inp_file outp_file motif = R.runResourceT $ do
       inp_s
         | raw = rawLengths inp_h
         | otherwise = bedLengths inp_h
-  S.mapM_ (liftIO . hPrint outp_h . dfaProbability tm) inp_s
+  flip runLruT cache_size $
+    S.mapM_ (liftIO . hPrint outp_h <=< dfaProbabilityCached tm) inp_s

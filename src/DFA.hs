@@ -10,6 +10,7 @@ import Numeric.LinearAlgebra hiding (remap, (<>))
 import NFA
 import Utils
 import qualified Partition as P
+import LruCache
 
 -- | The DFA type is parameterized on the state type, so that we can use
 -- Sets during the subset construction and then map them to integers for
@@ -198,3 +199,12 @@ dfaProbability
   -> Double
 dfaProbability TransferMatrix{..} len =
   (tmStart <# stimes len tmMatrix) <.> tmFinal
+
+dfaProbabilityCached
+  :: MonadLru Int (Matrix Double) m
+  => TransferMatrix
+  -> Int -- ^ length of the random string where they motif may occur
+  -> m Double
+dfaProbabilityCached TransferMatrix{..} len = do
+  pw <- lruPow len tmMatrix
+  return $ (tmStart <# pw) <.> tmFinal
