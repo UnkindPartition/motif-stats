@@ -68,7 +68,7 @@ work raw rc inp_file outp_file motif = R.runResourceT $ do
   outp_h <- case outp_file of
     Nothing -> return stdout
     Just path -> snd <$> R.allocate (openFile path ReadMode) hClose
-  let tm = dfaTransferMatrix . nfaToDfa primitiveCodes . motifToNFA rc $ motif
+  let tm = motifToTm rc motif
       inp_s
         | raw = rawLengths inp_h
         | otherwise = bedLengths inp_h

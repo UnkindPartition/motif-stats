@@ -3,6 +3,7 @@ module IUPAC where
 import Data.Char
 import qualified Data.Map as Map
 import NFA
+import DFA
 
 iupacCodes :: Map.Map Char [Char]
 iupacCodes = Map.fromList $
@@ -51,3 +52,10 @@ motifToNFA rc motif =
         RC -> mk_re expanded `Alt` mk_re expanded_rc
         NoRC -> mk_re expanded
   in compile primitiveCodes $ Star AnySym `Seq` re `Seq` Star AnySym
+
+-- | Convert an IUPAC motif to a transfer matrix
+motifToTm
+  :: RC
+  -> String
+  -> TransferMatrix
+motifToTm rc = dfaTransferMatrix . remapStates . nfaToDfa primitiveCodes . motifToNFA rc
