@@ -174,15 +174,16 @@ data TransferMatrix = TransferMatrix
 -- Return the matrix and the 0-based indices of the start and end states.
 dfaTransferMatrix
   :: (Ord c, Ord s)
-  => DFA s c
+  => Map.Map c Double -- ^ character probabilities
+  -> DFA s c
   -> TransferMatrix
-dfaTransferMatrix (mapStatesToInt -> DFA{..}) =
+dfaTransferMatrix freqs (mapStatesToInt -> DFA{..}) =
   -- we remap the DFA once again to make sure the numbers are consecutive
   let
     n = Set.size dfaStates
     elts =
-      [ ((s0, s1), 0.25)
-      | (_, s0, s1) <- Set.toList dfaTransitions
+      [ ((s0, s1), freqs Map.! c)
+      | (c, s0, s1) <- Set.toList dfaTransitions
       ]
   in
     TransferMatrix

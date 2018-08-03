@@ -8,6 +8,7 @@ import qualified Streaming.Prelude as S
 import qualified Data.ByteString.Streaming.Char8 as SB
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lex.Integral as L
+import qualified Data.Map as Map
 import System.IO
 import IUPAC
 import DFA
@@ -31,6 +32,13 @@ main = join . customExecParser (prefs showHelpOnError) $
         <*> flag RC NoRC
             ( long "norc"
             <> help "consider only motif itself (default: consider also its reverse complement"
+            )
+        <*> option (eitherReader parseFreqs)
+            ( long "freqs"
+            <> metavar "NUM,NUM[,NUM,NUM]"
+            <> help "Frequencies of A,C,[G,T]"
+            <> value (replicate 4 0.25)
+            <> showDefault
             )
         <*> optional (strOption
             ( short 'i'
@@ -68,8 +76,8 @@ readNum bs =
     Just (n, rest) | BS.null rest -> n
     _ -> error $ "Invalid number: " ++ show bs
 
-work :: Bool -> RC -> Maybe FilePath -> Maybe FilePath -> Integer -> String -> IO ()
-work raw rc inp_file outp_file cache_size motif =
+work :: Bool -> RC -> [Double] -> Maybe FilePath -> Maybe FilePath -> Integer -> String -> IO ()
+work raw rc freqs inp_file outp_file cache_size motif =
   R.runResourceT $ do
 
   inp_h <- case inp_file of
@@ -78,7 +86,7 @@ work raw rc inp_file outp_file cache_size motif =
   outp_h <- case outp_file of
     Nothing -> return stdout
     Just path -> snd <$> R.allocate (openFile path WriteMode) hClose
-  let tm = motifToTm rc motif
+  let tm = motifToTm rc (Map.fromList $ zip primitiveCodes freqs) motif
       inp_s
         | raw = rawLengths inp_h
         | otherwise = bedLengths inp_h

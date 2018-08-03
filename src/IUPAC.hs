@@ -2,6 +2,7 @@ module IUPAC where
 
 import Data.Char
 import qualified Data.Map as Map
+import Text.ParserCombinators.ReadP
 import NFA
 import DFA
 
@@ -56,9 +57,27 @@ motifToNFA rc motif =
 -- | Convert an IUPAC motif to a transfer matrix
 motifToTm
   :: RC
+  -> Map.Map Char Double
   -> String
   -> TransferMatrix
-motifToTm rc
-  = dfaTransferMatrix
+motifToTm rc freqs
+  = dfaTransferMatrix freqs
   . minimizeDfa . mapStatesToInt
   . nfaToDfa primitiveCodes . motifToNFA rc
+
+parseFreqs :: String -> Either String [Double]
+parseFreqs str = checkLength =<< runParser (sepBy dbl (char ',') <* eof)
+  where
+    dbl :: ReadP Double
+    dbl = readS_to_P reads
+
+    runParser :: ReadP a -> Either String a
+    runParser r =
+      case readP_to_S r str of
+        [(v, "")] -> Right v
+        _ -> Left $ "Cannot parse frequencies from " ++ show str
+
+    checkLength :: [Double] -> Either String [Double]
+    checkLength l | length l == 4 = Right l
+    checkLength [a,c] = Right [a,c,c,a]
+    checkLength l = Left $ "2 or 4 frequencies required, got " ++ show (length l)
