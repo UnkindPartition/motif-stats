@@ -4,13 +4,19 @@ import System.Random
 import Data.Monoid
 import Control.Monad
 import Control.Monad.IO.Class
+import qualified Data.Map as Map
 import DFA
 import IUPAC
 import LruCache
 
 iupacProb1 :: RC -> String -> Int -> Double
 iupacProb1 rc motif =
-  dfaProbability $ motifToTm rc motif
+  dfaProbability $ motifToTm rc (Map.fromList $ zip primitiveCodes $ replicate 4 0.25) motif
+
+-- use hg38 frequencies
+iupacProb2 :: RC -> String -> Int -> Double
+iupacProb2 rc motif =
+  dfaProbability $ motifToTm rc (Map.fromList $ zip primitiveCodes [0.2950,0.2050,0.2050,0.2950]) motif
 
 main :: IO ()
 main = defaultMain $ testGroup "Tests"
@@ -32,6 +38,10 @@ main = defaultMain $ testGroup "Tests"
       iupacProb1 RC "GG" 2 @?= 2 * iupacProb1 NoRC "GG" 2
   , testCase "\"K\", 2 strands, n = 1" $
       iupacProb1 RC "K" 2 @?= 1
+  , testCase "\"SASTWB\", 2 strands, n = 100, hg38 frequencies" $ do
+      -- verified using simulate.R
+      let actual = iupacProb2 RC "SASTWB" 100
+      assertBool ("Got: " ++ show actual) $ abs(actual - 0.6960) < 0.0001
   , testCase "LRU-cached power" $ do
       let
         g = mkStdGen 2018

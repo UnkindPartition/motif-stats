@@ -81,5 +81,6 @@ test-suite test
     , tasty
     , tasty-hunit
     , random
+    , containers
     , motif-stats
   ghc-options: -Wall -Wno-type-defaults
