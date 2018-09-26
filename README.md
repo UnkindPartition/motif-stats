@@ -22,7 +22,8 @@ With the `--norc` switch, it only considers the motif itself.
 
 
 ```
-Usage: motif-stats [-r|--raw] [--norc] [-i ARG] [-o ARG] MOTIF
+Usage: motif-stats [-r|--raw] [--norc] [--freqs NUM,NUM[,NUM,NUM]] [-i ARG]
+                   [-o ARG] [--cache-size NUM] MOTIF
   Calculate the probability of a motif occurrence in an interval
 
 Available options:
@@ -31,8 +32,13 @@ Available options:
                            default is BED file)
   --norc                   consider only motif itself (default: consider also
                            its reverse complement
+  --freqs NUM,NUM[,NUM,NUM]
+                           Frequencies of
+                           A,C,[G,T] (default: [0.25,0.25,0.25,0.25])
   -i ARG                   the input file (default: stdin)
   -o ARG                   the output file (default: stdout)
+  --cache-size NUM         the cache size for matrix
+                           multiplication (default: 1000)
   MOTIF                    motif represented as a string of IUPAC codes
 ```
 
